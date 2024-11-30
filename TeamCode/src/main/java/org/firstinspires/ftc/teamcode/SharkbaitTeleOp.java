@@ -32,17 +32,21 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import org.firstinspires.ftc.teamcode.constants.TeleOpServoConstants;
 
 import java.lang.Math;
 
+import java.util.List;
 import java.util.TimerTask;
 import java.util.Timer;
+import java.util.prefs.NodeChangeListener;
 
 
 /*
@@ -85,12 +89,15 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private Servo OtRightElbowServo = null;
     private Servo OtCoaxialServo = null;
     private Servo OtLinkageServo = null;
+    private Limelight3A litty = null;
 
     private int intakeIndex = 0;
     private int outtakeIndex = 0;
 
     private boolean inClawDelay = false;
     private boolean otClawDelay = false;
+    private boolean inClawOpened = false;
+    private boolean otClawOpened = false;
 
     private boolean oldCrossPressed = true;
     private boolean oldTrianglePressed = true;
@@ -107,7 +114,7 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private boolean isOtArmMoving = false;
     
     private boolean isInDiffyMoving = false;
-    private boolean isOtCoaxialMoving = false
+    private boolean isOtCoaxialMoving = false;
 
     private double[] ILEServoPositions = TeleOpServoConstants.ILEServoPositions;
     private double[] IREServoPositions = TeleOpServoConstants.IREServoPositions;
@@ -121,6 +128,8 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private double[] OKServoPositions = TeleOpServoConstants.OKServoPositions;
     
     private double[] SlowModeSpeed = TeleOpServoConstants.SlowModeSpeed;
+
+    private int inPosition = 1;
 
 
     private final int DELAY_BETWEEN_MOVES = 100;
@@ -147,13 +156,29 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 isOtArmMoving = val;
             }
         }
-        class setInClawDelay extends TimerTask {
+        class setIsOtCoaxialMoving extends TimerTask {
             boolean val;
-            public setInClawDelay(boolean v) {
+            public setIsOtCoaxialMoving(boolean v) {
                 this.val = v;
             }
             public void run() {
+                isOtCoaxialMoving = val;
+            }
+        }
+        class setInClawDelay extends TimerTask {
+            boolean val;
+            public setInClawDelay(boolean v) { this.val = v; }
+            public void run() {
                 inClawDelay = val;
+            }
+        }
+        class setIsInDiffyMoving extends TimerTask {
+            boolean val;
+            public setIsInDiffyMoving(boolean v) {
+                this.val = v;
+            }
+            public void run() {
+                isInDiffyMoving = val;
             }
         }
 
@@ -168,9 +193,7 @@ public class SharkbaitTeleOp extends LinearOpMode {
         }
          class OuttakeExtension extends TimerTask {
             double i;
-            public OuttakeExtension(double i) {
-                this.i = i;
-            }
+            public OuttakeExtension(double i) { this.i = i; }
             public void run() {
                 OtSlideL.setPower(i);
                 OtSlideM.setPower(i);
@@ -208,13 +231,16 @@ public class SharkbaitTeleOp extends LinearOpMode {
 
         class MoveInDiffyServoPosition extends TimerTask {
             int i;
-            public MoveInDiffyServoPosition(int i) {
-                this.i = i;
-            }
+            double k;
+            public MoveInDiffyServoPosition(int i) { this.i = i; }
+            public MoveInDiffyServoPosition(double k) { this.k = k; }
             public void run() {
                 InLDiffyServo.setPosition(LDServoPositions[i]);
                 InRDiffyServo.setPosition(RDServoPositions[i]);
 
+
+                //InLDiffyServo.setPosition(InLDiffyServo.getPosition() + i);
+                //InRDiffyServo.setPosition(InRDiffyServo.getPosition() + i);
             }
         }
 
@@ -225,7 +251,6 @@ public class SharkbaitTeleOp extends LinearOpMode {
             }
             public void run() {
                 OtCoaxialServo.setPosition(OAServoPositions[i]);
-
             }
         }
 
@@ -304,6 +329,12 @@ public class SharkbaitTeleOp extends LinearOpMode {
         FRMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         BLMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         BRMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        litty = hardwareMap.get(Limelight3A.class, "pipeline");
+        litty.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
+        telemetry.setMsTransmissionInterval(11);
+        litty.pipelineSwitch(2);
+        litty.start();
         
 
         
@@ -404,24 +435,20 @@ public class SharkbaitTeleOp extends LinearOpMode {
             boolean rightBumper = gamepad2.right_bumper;
             
 
-            if (leftBumper && inClawOpened && !inClawDelay) { //close Intake claw
+            if (leftBumper && !inClawDelay && !oldLeftBumper) { //close Intake claw
                 new setInClawDelay(true).run();
-                InClawServo.setPosition(ICServoPositions[1]);
+                if (inClawOpened) { InClawServo.setPosition(ICServoPositions[1]); } //close Intake Claw
+                else { InClawServo.setPosition(ICServoPositions[0]); }//open Intake Claw
                 timer.schedule(new setInClawDelay(false), 10 * DELAY_BETWEEN_MOVES);
-            } else if (leftBumper && !inClawOpened && !inClawDelay) { //open Intake claw
-                new setInClawDelay(true).run();
-                InClawServo.setPosition(ICServoPositions[0]
-                timer.schedule(new setInClawDelay(false), 10 * DELAY_BETWEEN_MOVES);
+                inClawOpened = !inClawOpened;
             }
             
-            if (rightBumper && otClawOpened && !OtClawDelay) { //close Outtake claw
+            if (rightBumper && !otClawDelay && !oldRightBumper) { //close Outtake claw
                 new setOtClawDelay(true).run();
-                OtClawServo.setPosition(OCServoPositions[1]);
+                if (otClawOpened){ OtClawServo.setPosition(OCServoPositions[1]); } // close Outtake claw
+                else { OtClawServo.setPosition(OCServoPositions[0]); } //open Outtake claw
                 timer.schedule(new setOtClawDelay(false), 10 * DELAY_BETWEEN_MOVES);
-            } else if (rightBumper && !otClawOpened && !otClawDelay) { //open Outtake claw
-                new setOtClawDelay(true).run();
-                OtClawServo.setPosition(OCServoPositions[0]);
-                timer.schedule(new setOtClawDelay(false), 10 * DELAY_BETWEEN_MOVES);
+                otClawOpened = !otClawOpened;
             }
             
             if (crossPressed && !oldCrossPressed && !isOtArmMoving) { //pickup sample from intake outtakeIndex = 0
@@ -436,8 +463,8 @@ public class SharkbaitTeleOp extends LinearOpMode {
             } else if (circlePressed && !oldCirclePressed && !isOtArmMoving) { //pickup specimen from wall outtakeIndex = 3
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
-                timer.schedule(new MoveOtCoaxialServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveOtElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(3), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(3), 2 *DELAY_BETWEEN_MOVES);
 
                 timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
@@ -445,54 +472,132 @@ public class SharkbaitTeleOp extends LinearOpMode {
             } else if (trianglePressed && !oldTrianglePressed && !isOtArmMoving) { //outtake from back of robot outtakeIndex = 2
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
-                timer.schedule(new MoveOtCoaxialServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveOtElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(2), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(2), 2 *DELAY_BETWEEN_MOVES);
 
                 timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
 
-            } else if (squarePressed && !oldSquarePressed && !isOtArmMoving) { //outtake from front of robot outtakeIndex = 3
+            } else if (squarePressed && !oldSquarePressed && !isOtArmMoving) { //outtake from front of robot outtakeIndex = 1
                 //needs code for linkage, wont do until we have fixed linkage slides
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
-                timer.schedule(new MoveOtCoaxialServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveOtElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(1), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(1), 2 *DELAY_BETWEEN_MOVES);
 
                 timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
+
             }
             
             if (dpadDownPressed && !oldDownDpadPressed && !isInArmMoving) { //intake position intakeIndex = 0
                 //Needs Limelight Logic and to move down to the servo positions for the Diffy and the Elbow
-                
+                inPosition = 0;
             } else if (dpadRightPressed && !oldRightDpadPressed && !isInArmMoving) { //position for getting over submersible walls intakeIndex = 2
                 new setIsInArmMoving(true).run();
                 new setIsInDiffyMoving(true).run();
-                timer.schedule(new MoveInDiffyServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveInElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInDiffyServoPosition(2), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInElbowServosPosition(2), 2 *DELAY_BETWEEN_MOVES);
 
                 timer.schedule(new setIsInArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
-                
+                inPosition = 2;
             } else if (dpadLeftPressed && !oldLeftDpadPressed && !isInArmMoving) { //position for scanning for samples intakeIndex = 1
                 new setIsInArmMoving(true).run();
                 new setIsInDiffyMoving(true).run();
-                timer.schedule(new MoveInDiffyServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveInElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInDiffyServoPosition(1), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInElbowServosPosition(1), 2 *DELAY_BETWEEN_MOVES);
 
                 timer.schedule(new setIsInArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
-                
+                inPosition = 1;
             } else if (dpadUpPressed && !oldUpDpadPressed && !isInArmMoving) { //position for transferring sample to outtake intakeIndex = 3
                 new setIsInArmMoving(true).run();
                 new setIsInDiffyMoving(true).run();
-                timer.schedule(new MoveInDiffyServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveInElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInDiffyServoPosition(3), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInElbowServosPosition(3), 2 *DELAY_BETWEEN_MOVES);
 
                 timer.schedule(new setIsInArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                inPosition = 3;
             }
+            if (inPosition == 0){
+                litty.pipelineSwitch(0);//red
+//                    litty.pipelineSwitch(1);//blue
+                LLResult seeingStuff = litty.getLatestResult();
+                if (seeingStuff != null && seeingStuff.isValid()) {
 
+                    LLResultTypes.ColorResult colorResult;
+                    List<LLResultTypes.ColorResult> colorResults = seeingStuff.getColorResults();
+
+                    if (!colorResults.isEmpty()) {
+                        colorResult = colorResults.get(0);
+                        List<List<Double>> targetCorners = colorResult.getTargetCorners();
+                        if (!targetCorners.isEmpty()) {
+                            List<Double> c1 = targetCorners.get(0);
+                            List<Double> c2 = targetCorners.get(1);
+                            List<Double> c3 = targetCorners.get(2);
+                            List<Double> c4 = targetCorners.get(3);
+
+                            double c1c2YOffset = c1.get(1) - c2.get(1);
+                            double c1c2XOffset = c1.get(0) - c2.get(1);
+                            double c1c3XOffset = c1.get(0) - c3.get(0);
+                            double c1c3YOffset = c1.get(1) - c3.get(1);
+                            double Angleish;
+                            boolean isHorizontal = false;
+
+                            if (c1c2XOffset > c1c3YOffset) {
+                                isHorizontal = true;
+                            } else {
+                                isHorizontal = false;
+                            }
+                            if(isHorizontal){ Angleish = (Math.atan2(c1c2YOffset, c1c2XOffset)); }
+                            else { Angleish = 90 + (Math.atan2(c1c3YOffset, c1c3XOffset)); }
+                            telemetry.addData("Angle:", Angleish);
+                            timer.schedule(new MoveInDiffyServoPosition(Angleish), 0 * DELAY_BETWEEN_MOVES);
+                        }
+                    }
+                }else {
+                    litty.pipelineSwitch(2);//yellow
+                    seeingStuff = litty.getLatestResult();
+                    if (seeingStuff != null && seeingStuff.isValid()) {
+
+                        LLResultTypes.ColorResult colorResult;
+                        List<LLResultTypes.ColorResult> colorResults = seeingStuff.getColorResults();
+
+                        if (!colorResults.isEmpty()) {
+                            colorResult = colorResults.get(0);
+                            List<List<Double>> targetCorners = colorResult.getTargetCorners();
+                            if (!targetCorners.isEmpty()) {
+                                List<Double> c1 = targetCorners.get(0);
+                                List<Double> c2 = targetCorners.get(1);
+                                List<Double> c3 = targetCorners.get(2);
+                                List<Double> c4 = targetCorners.get(3);
+
+                                double c1c2YOffset = c1.get(1) - c2.get(1);
+                                double c1c2XOffset = c1.get(0) - c2.get(1);
+                                double c1c3XOffset = c1.get(0) - c3.get(0);
+                                double c1c3YOffset = c1.get(1) - c3.get(1);
+                                double Angleish;
+                                boolean isHorizontal = false;
+
+                                if (c1c2XOffset > c1c3YOffset) {
+                                    isHorizontal = true;
+                                } else {
+                                    isHorizontal = false;
+                                }
+                                if (isHorizontal) {
+                                    Angleish = (Math.atan2(c1c2YOffset, c1c2XOffset));
+                                } else {
+                                    Angleish = 90 + (Math.atan2(c1c3YOffset, c1c3XOffset));
+                                }
+                                telemetry.addData("Angle:", Angleish);
+                                timer.schedule(new MoveInDiffyServoPosition(Angleish), 0 * DELAY_BETWEEN_MOVES);
+                            }
+                        }
+                    }
+                }
+            }
 
 
 
