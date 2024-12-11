@@ -46,7 +46,6 @@ import java.lang.Math;
 import java.util.List;
 import java.util.TimerTask;
 import java.util.Timer;
-import java.util.prefs.NodeChangeListener;
 
 
 /*
@@ -74,9 +73,9 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private DcMotor BRMotor = null;
     
     private DcMotor InSlide = null;
-    private DcMotor OtSlideL = null;
+    private DcMotor OtSlideB = null;
     private DcMotor OtSlideM = null;
-    private DcMotor OtSlideR = null;
+    private DcMotor OtSlideF = null;
     
     private CRServo InLDiffyServo = null;
     private CRServo InRDiffyServo = null;
@@ -195,9 +194,9 @@ public class SharkbaitTeleOp extends LinearOpMode {
             double i;
             public OuttakeExtension(double i) { this.i = i; }
             public void run() {
-                OtSlideL.setPower(i);
+                OtSlideB.setPower(i);
                 OtSlideM.setPower(i);
-                OtSlideR.setPower(i);
+                OtSlideF.setPower(i);
             }
         }
         class MoveOtElbowServosPosition extends TimerTask {
@@ -235,8 +234,8 @@ public class SharkbaitTeleOp extends LinearOpMode {
             public MoveInDiffyServoPosition(int i) { this.i = i; }
             public MoveInDiffyServoPosition(double k) { this.k = k; }
             public void run() {
-                InLDiffyServo.setPosition(LDServoPositions[i]);
-                InRDiffyServo.setPosition(RDServoPositions[i]);
+//                InLDiffyServo.setPosition(LDServoPositions[i]);
+//                InRDiffyServo.setPosition(RDServoPositions[i]);
 
 
                 //InLDiffyServo.setPosition(InLDiffyServo.getPosition() + i);
@@ -261,26 +260,26 @@ public class SharkbaitTeleOp extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        FLMotor = hardwareMap.get(DcMotor.class, "FL");
-        FRMotor = hardwareMap.get(DcMotor.class, "FR");
-        BLMotor = hardwareMap.get(DcMotor.class, "BL");
-        BRMotor = hardwareMap.get(DcMotor.class, "BR");
-        InSlide = hardwareMap.get(DcMotor.class, "IS");
-        OtSlideL = hardwareMap.get(DcMotor.class, "OL");
-        OtSlideM = hardwareMap.get(DcMotor.class, "OM");
-        OtSlideR = hardwareMap.get(DcMotor.class, "OR");
+        FLMotor = hardwareMap.get(DcMotor.class, "FL"); //Front Left
+        FRMotor = hardwareMap.get(DcMotor.class, "FR"); //Front Right
+        BLMotor = hardwareMap.get(DcMotor.class, "BL"); //Back Left
+        BRMotor = hardwareMap.get(DcMotor.class, "BR"); //Back Right
+        InSlide = hardwareMap.get(DcMotor.class, "IS"); //Intake Slide
+        OtSlideB = hardwareMap.get(DcMotor.class, "OB"); //Outtake Back
+        OtSlideM = hardwareMap.get(DcMotor.class, "OM"); //Outtake Middle
+        OtSlideF = hardwareMap.get(DcMotor.class, "OF"); //Outtake Front
         
-        InLeftElbowServo = hardwareMap.get(Servo.class, "ILE");
-        InRightElbowServo = hardwareMap.get(Servo.class, "IRE");
-        InClawServo = hardwareMap.get(Servo.class, "IC");
-        InLDiffyServo = hardwareMap.get(CRServo.class, "LD");
-        InRDiffyServo = hardwareMap.get(CRServo.class, "RD");
+        InLeftElbowServo = hardwareMap.get(Servo.class, "ILE"); //Intake Left Elbow
+        InRightElbowServo = hardwareMap.get(Servo.class, "IRE"); //Intake Right Elbow
+        InClawServo = hardwareMap.get(Servo.class, "IC"); //Intake Claw
+        InLDiffyServo = hardwareMap.get(CRServo.class, "LD"); //Left Diffy
+        InRDiffyServo = hardwareMap.get(CRServo.class, "RD"); //Right Diffy
 
-        OtLeftElbowServo = hardwareMap.get(Servo.class, "OLE");
-        OtRightElbowServo = hardwareMap.get(Servo.class, "ORE");
-        OtClawServo = hardwareMap.get(Servo.class, "OC");
-        OtCoaxialServo = hardwareMap.get(Servo.class, "OA");
-        OtLinkageServo = hardwareMap.get(Servo.class, "OK");
+        OtLeftElbowServo = hardwareMap.get(Servo.class, "OLE"); //Outtake Left Elbow
+        OtRightElbowServo = hardwareMap.get(Servo.class, "ORE"); //Outtake Right Elbow
+        OtClawServo = hardwareMap.get(Servo.class, "OC"); //Outtake Claw
+        OtCoaxialServo = hardwareMap.get(Servo.class, "OA"); //Outtake Coaxial
+        OtLinkageServo = hardwareMap.get(Servo.class, "OK"); //Outtake Linkage
         Timer timer = new Timer();
 
         FLMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -289,9 +288,9 @@ public class SharkbaitTeleOp extends LinearOpMode {
         BRMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         
         InSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        OtSlideL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        OtSlideB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         OtSlideM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        OtSlideR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        OtSlideF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         
         //In the future will need code for Encoders on the Motors
 
@@ -304,9 +303,9 @@ public class SharkbaitTeleOp extends LinearOpMode {
         BRMotor.setDirection(DcMotor.Direction.FORWARD);
 
         InSlide.setDirection(DcMotor.Direction.REVERSE);
-        OtSlideL.setDirection(DcMotor.Direction.FORWARD);
+        OtSlideB.setDirection(DcMotor.Direction.FORWARD);
         OtSlideM.setDirection(DcMotor.Direction.REVERSE);
-        OtSlideR.setDirection(DcMotor.Direction.FORWARD);
+        OtSlideF.setDirection(DcMotor.Direction.FORWARD);
         
         
         InLeftElbowServo.setDirection(Servo.Direction.FORWARD);
