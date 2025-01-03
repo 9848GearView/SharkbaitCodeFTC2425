@@ -33,20 +33,14 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 import org.firstinspires.ftc.teamcode.constants.TeleOpServoConstants;
 
 import java.lang.Math;
-
-import java.util.List;
 import java.util.TimerTask;
 import java.util.Timer;
-import java.util.prefs.NodeChangeListener;
 
 
 /*
@@ -74,12 +68,12 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private DcMotor BRMotor = null;
     
     private DcMotor InSlide = null;
-    private DcMotor OtSlideL = null;
+    private DcMotor OtSlideF = null;
     private DcMotor OtSlideM = null;
-    private DcMotor OtSlideR = null;
+    private DcMotor OtSlideB = null;
     
-    private CRServo InLDiffyServo = null;
-    private CRServo InRDiffyServo = null;
+    private Servo InLDiffyServo = null;
+    private Servo InRDiffyServo = null;
     private Servo InLeftElbowServo = null;
     private Servo InRightElbowServo = null;
     private Servo InClawServo = null;
@@ -88,14 +82,18 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private Servo OtLeftElbowServo = null;
     private Servo OtRightElbowServo = null;
     private Servo OtCoaxialServo = null;
-    private Servo OtLinkageServo = null;
+    private Servo OtLinkageLServo = null;
+    private Servo OtLinkageRServo = null;
     private Limelight3A litty = null;
 
     private int intakeIndex = 0;
     private int outtakeIndex = 0;
 
+    private int diffyRotateIndex = 0;
+
     private boolean inClawDelay = false;
     private boolean otClawDelay = false;
+    private boolean diffyRotateDelay = false;
     private boolean inClawOpened = false;
     private boolean otClawOpened = false;
 
@@ -125,7 +123,8 @@ public class SharkbaitTeleOp extends LinearOpMode {
     private double[] OAServoPositions = TeleOpServoConstants.OAServoPositions;
     private double[] ICServoPositions = TeleOpServoConstants.ICServoPositions;
     private double[] OCServoPositions = TeleOpServoConstants.OCServoPositions;
-    private double[] OKServoPositions = TeleOpServoConstants.OKServoPositions;
+    private double[] OKLServoPositions = TeleOpServoConstants.OKLServoPositions;
+    private double[] OKRServoPositions = TeleOpServoConstants.OKRServoPositions;
     
     private double[] SlowModeSpeed = TeleOpServoConstants.SlowModeSpeed;
 
@@ -158,6 +157,7 @@ public class SharkbaitTeleOp extends LinearOpMode {
         }
         class setIsOtCoaxialMoving extends TimerTask {
             boolean val;
+
             public setIsOtCoaxialMoving(boolean v) {
                 this.val = v;
             }
@@ -172,6 +172,8 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 inClawDelay = val;
             }
         }
+
+
         class setIsInDiffyMoving extends TimerTask {
             boolean val;
             public setIsInDiffyMoving(boolean v) {
@@ -191,18 +193,28 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 otClawDelay = val;
             }
         }
+
+        class setDiffyRotateDelay extends TimerTask {
+            boolean val;
+            public setDiffyRotateDelay(boolean v) {
+                this.val = v;
+            }
+            public void run() {
+                diffyRotateDelay = val;
+            }
+        }
          class OuttakeExtension extends TimerTask {
             double i;
             public OuttakeExtension(double i) { this.i = i; }
             public void run() {
-                OtSlideL.setPower(i);
+                OtSlideF.setPower(i);
                 OtSlideM.setPower(i);
-                OtSlideR.setPower(i);
+                OtSlideB.setPower(i);
             }
         }
-        class MoveOtElbowServosPosition extends TimerTask {
+        class MoveInElbowServosPosition extends TimerTask {
             int i;
-            public MoveOtElbowServosPosition(int i) {
+            public MoveInElbowServosPosition(int i) {
                 this.i = i;
             }
             public void run() {
@@ -214,9 +226,9 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 intakeIndex = i;
             }
         }
-        class MoveInElbowServosPosition extends TimerTask {
+        class MoveOtElbowServosPosition extends TimerTask {
             int i;
-            public MoveInElbowServosPosition(int i) {
+            public MoveOtElbowServosPosition(int i) {
                 this.i = i;
             }
             public void run() {
@@ -253,6 +265,16 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 OtCoaxialServo.setPosition(OAServoPositions[i]);
             }
         }
+        class MoveOtLinkageServoPosition extends TimerTask {
+            int i;
+            public MoveOtLinkageServoPosition(int i) {
+                this.i = i;
+            }
+            public void run() {
+                OtLinkageLServo.setPosition(OKLServoPositions[i]);
+                OtLinkageRServo.setPosition(OKRServoPositions[i]);
+            }
+        }
 
 
         telemetry.addData("Status", "Initialized");
@@ -266,21 +288,22 @@ public class SharkbaitTeleOp extends LinearOpMode {
         BLMotor = hardwareMap.get(DcMotor.class, "BL");
         BRMotor = hardwareMap.get(DcMotor.class, "BR");
         InSlide = hardwareMap.get(DcMotor.class, "IS");
-        OtSlideL = hardwareMap.get(DcMotor.class, "OL");
+        OtSlideF = hardwareMap.get(DcMotor.class, "OF");
         OtSlideM = hardwareMap.get(DcMotor.class, "OM");
-        OtSlideR = hardwareMap.get(DcMotor.class, "OR");
+        OtSlideB = hardwareMap.get(DcMotor.class, "OB");
         
         InLeftElbowServo = hardwareMap.get(Servo.class, "ILE");
         InRightElbowServo = hardwareMap.get(Servo.class, "IRE");
         InClawServo = hardwareMap.get(Servo.class, "IC");
-        InLDiffyServo = hardwareMap.get(CRServo.class, "LD");
-        InRDiffyServo = hardwareMap.get(CRServo.class, "RD");
+        InLDiffyServo = hardwareMap.get(Servo.class, "LD");
+        InRDiffyServo = hardwareMap.get(Servo.class, "RD");
 
         OtLeftElbowServo = hardwareMap.get(Servo.class, "OLE");
         OtRightElbowServo = hardwareMap.get(Servo.class, "ORE");
         OtClawServo = hardwareMap.get(Servo.class, "OC");
         OtCoaxialServo = hardwareMap.get(Servo.class, "OA");
-        OtLinkageServo = hardwareMap.get(Servo.class, "OK");
+        OtLinkageLServo = hardwareMap.get(Servo.class, "OKL");
+        OtLinkageRServo = hardwareMap.get(Servo.class, "OKR");
         Timer timer = new Timer();
 
         FLMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -289,9 +312,9 @@ public class SharkbaitTeleOp extends LinearOpMode {
         BRMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         
         InSlide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        OtSlideL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        OtSlideF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         OtSlideM.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        OtSlideR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        OtSlideB.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         
         //In the future will need code for Encoders on the Motors
 
@@ -301,27 +324,28 @@ public class SharkbaitTeleOp extends LinearOpMode {
         FLMotor.setDirection(DcMotor.Direction.REVERSE);
         FRMotor.setDirection(DcMotor.Direction.FORWARD);
         BLMotor.setDirection(DcMotor.Direction.REVERSE);
-        BRMotor.setDirection(DcMotor.Direction.FORWARD);
+        BRMotor.setDirection(DcMotor.Direction.REVERSE);
 
         InSlide.setDirection(DcMotor.Direction.REVERSE);
-        OtSlideL.setDirection(DcMotor.Direction.FORWARD);
-        OtSlideM.setDirection(DcMotor.Direction.REVERSE);
-        OtSlideR.setDirection(DcMotor.Direction.FORWARD);
+        OtSlideF.setDirection(DcMotor.Direction.REVERSE);
+        OtSlideM.setDirection(DcMotor.Direction.FORWARD);
+        OtSlideB.setDirection(DcMotor.Direction.REVERSE);
         
         
-        InLeftElbowServo.setDirection(Servo.Direction.FORWARD);
+        InLeftElbowServo.setDirection(Servo.Direction.REVERSE);
         InRightElbowServo.setDirection(Servo.Direction.REVERSE);
         OtLeftElbowServo.setDirection(Servo.Direction.FORWARD);
-        OtRightElbowServo.setDirection(Servo.Direction.REVERSE);
+        OtRightElbowServo.setDirection(Servo.Direction.FORWARD);
         
         InClawServo.setDirection(Servo.Direction.FORWARD);
         OtClawServo.setDirection(Servo.Direction.FORWARD);
 
         OtCoaxialServo.setDirection(Servo.Direction.FORWARD);
-        OtLinkageServo.setDirection(Servo.Direction.FORWARD);
+        OtLinkageLServo.setDirection(Servo.Direction.REVERSE);
+        OtLinkageRServo.setDirection(Servo.Direction.FORWARD);
         
-        InLDiffyServo.setDirection(CRServo.Direction.FORWARD);
-        InRDiffyServo.setDirection(CRServo.Direction.FORWARD);
+        InLDiffyServo.setDirection(Servo.Direction.FORWARD);
+        InRDiffyServo.setDirection(Servo.Direction.REVERSE);
 
         
 
@@ -330,26 +354,33 @@ public class SharkbaitTeleOp extends LinearOpMode {
         BLMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         BRMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        litty = hardwareMap.get(Limelight3A.class, "pipeline");
+        /*litty = hardwareMap.get(Limelight3A.class, "pipeline");
         litty.setPollRateHz(100); // This sets how often we ask Limelight for data (100 times per second)
         telemetry.setMsTransmissionInterval(11);
         litty.pipelineSwitch(2);
-        litty.start();
-        
+        litty.start();*/
 
+        InLDiffyServo.setPosition(LDServoPositions[0]);
+        InRDiffyServo.setPosition(RDServoPositions[0]);
+        InClawServo.setPosition(ICServoPositions[0]);
+        OtClawServo.setPosition(OCServoPositions[0]);
+        OtLinkageLServo.setPosition(OKLServoPositions[0]);
+        OtLinkageRServo.setPosition(OKRServoPositions[0]);
+        InLeftElbowServo.setPosition(ILEServoPositions[0]);
+        InRightElbowServo.setPosition(IREServoPositions[0]);
+        OtLeftElbowServo.setPosition(OLEServoPositions[0]);
+        OtRightElbowServo.setPosition(OREServoPositions[0]);
+        OtCoaxialServo.setPosition(OAServoPositions[0]);
         
         // Wait for the game to start (driver presses START)
         waitForStart();
         runtime.reset();
-        
-    
+
+
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
 
-            // Setup a variable for each drive wheel to save power level for telemetry
 
-            // Choose to drive using either Tank Mode, or POV Mode
-            // Comment out the method that's not used.  The default below is POV.
 
             // POV Mode uses left stick to go forward, and right stick to turn.
             // - This uses basic math to combine motions and is easier to drive straight.
@@ -445,6 +476,7 @@ public class SharkbaitTeleOp extends LinearOpMode {
             
             if (rightBumper && !otClawDelay && !oldRightBumper) { //close Outtake claw
                 new setOtClawDelay(true).run();
+                if (outtakeIndex == 3) timer.schedule(new MoveOtCoaxialServoPosition(0), 5 *DELAY_BETWEEN_MOVES);
                 if (otClawOpened){ OtClawServo.setPosition(OCServoPositions[1]); } // close Outtake claw
                 else { OtClawServo.setPosition(OCServoPositions[0]); } //open Outtake claw
                 timer.schedule(new setOtClawDelay(false), 10 * DELAY_BETWEEN_MOVES);
@@ -454,44 +486,59 @@ public class SharkbaitTeleOp extends LinearOpMode {
             if (crossPressed && !oldCrossPressed && !isOtArmMoving) { //pickup sample from intake outtakeIndex = 0
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
-                timer.schedule(new MoveOtCoaxialServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveOtElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(4), 2 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(4), 4 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtLinkageServoPosition(2), 14 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(5),  20* DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(5), 22 * DELAY_BETWEEN_MOVES);
 
-                timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
-                timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsOtArmMoving(false), 24 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsOtCoaxialMoving(false), 24 *DELAY_BETWEEN_MOVES);
                 
             } else if (circlePressed && !oldCirclePressed && !isOtArmMoving) { //pickup specimen from wall outtakeIndex = 3
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
-                timer.schedule(new MoveOtCoaxialServoPosition(3), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveOtElbowServosPosition(3), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtLinkageServoPosition(0), 0 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(3), 6 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(3), 8 *DELAY_BETWEEN_MOVES);
 
-                timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
-                timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
+
+                timer.schedule(new setIsOtArmMoving(false), 12 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsOtCoaxialMoving(false), 12 *DELAY_BETWEEN_MOVES);
 
             } else if (trianglePressed && !oldTrianglePressed && !isOtArmMoving) { //outtake from back of robot outtakeIndex = 2
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
-                timer.schedule(new MoveOtCoaxialServoPosition(2), 0 * DELAY_BETWEEN_MOVES);
-                timer.schedule(new MoveOtElbowServosPosition(2), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtLinkageServoPosition(0), 0 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(1), 6 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(1), 8 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtCoaxialServoPosition(2), 8 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtElbowServosPosition(2), 10 *DELAY_BETWEEN_MOVES);
 
-                timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
-                timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
+
+                timer.schedule(new setIsOtArmMoving(false), 14 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsOtCoaxialMoving(false), 14 *DELAY_BETWEEN_MOVES);
 
             } else if (squarePressed && !oldSquarePressed && !isOtArmMoving) { //outtake from front of robot outtakeIndex = 1
-                //needs code for linkage, wont do until we have fixed linkage slides
                 new setIsOtArmMoving(true).run();
                 new setIsOtCoaxialMoving(true).run();
                 timer.schedule(new MoveOtCoaxialServoPosition(1), 0 * DELAY_BETWEEN_MOVES);
                 timer.schedule(new MoveOtElbowServosPosition(1), 2 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveOtLinkageServoPosition(1), 10 *DELAY_BETWEEN_MOVES);
 
-                timer.schedule(new setIsOtArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
-                timer.schedule(new setIsOtCoaxialMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsOtArmMoving(false), 12 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsOtCoaxialMoving(false), 12 *DELAY_BETWEEN_MOVES);
 
             }
             
             if (dpadDownPressed && !oldDownDpadPressed && !isInArmMoving) { //intake position intakeIndex = 0
-                //Needs Limelight Logic and to move down to the servo positions for the Diffy and the Elbow
+                new setIsInArmMoving(true).run();
+                new setIsInDiffyMoving(true).run();
+                timer.schedule(new MoveInDiffyServoPosition(0), 0 * DELAY_BETWEEN_MOVES);
+                timer.schedule(new MoveInElbowServosPosition(0), 2 *DELAY_BETWEEN_MOVES);
+
+                timer.schedule(new setIsInArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 inPosition = 0;
             } else if (dpadRightPressed && !oldRightDpadPressed && !isInArmMoving) { //position for getting over submersible walls intakeIndex = 2
                 new setIsInArmMoving(true).run();
@@ -511,6 +558,57 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 timer.schedule(new setIsInArmMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 inPosition = 1;
+                if (diffyRotateIndex == 0 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(5), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 1;
+                }else if(diffyRotateIndex == 1 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(6), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 2;
+                }else if(diffyRotateIndex == 2 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(7), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 3;
+                }else if(diffyRotateIndex == 3 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(4), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new MoveInDiffyServoPosition(8), 2 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 6 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 4;
+                }else if(diffyRotateIndex == 4 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(9), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 5;
+                }else if(diffyRotateIndex == 5 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(10), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 6;
+                }else if(diffyRotateIndex == 6 && dpadLeftPressed && !oldLeftDpadPressed && !diffyRotateDelay) {
+                    new setIsInDiffyMoving(true).run();
+                    new setDiffyRotateDelay(true).run();
+                    timer.schedule(new MoveInDiffyServoPosition(4), 0 * DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
+                    timer.schedule(new setDiffyRotateDelay(false), 10 *DELAY_BETWEEN_MOVES);
+                    diffyRotateIndex = 0;
+                }
             } else if (dpadUpPressed && !oldUpDpadPressed && !isInArmMoving) { //position for transferring sample to outtake intakeIndex = 3
                 new setIsInArmMoving(true).run();
                 new setIsInDiffyMoving(true).run();
@@ -521,7 +619,7 @@ public class SharkbaitTeleOp extends LinearOpMode {
                 timer.schedule(new setIsInDiffyMoving(false), 4 *DELAY_BETWEEN_MOVES);
                 inPosition = 3;
             }
-            if (inPosition == 0){
+            /*if (inPosition == 0){
                 litty.pipelineSwitch(0);//red
 //                    litty.pipelineSwitch(1);//blue
                 LLResult seeingStuff = litty.getLatestResult();
@@ -597,7 +695,7 @@ public class SharkbaitTeleOp extends LinearOpMode {
                         }
                     }
                 }
-            }
+            }*/
 
 
 
