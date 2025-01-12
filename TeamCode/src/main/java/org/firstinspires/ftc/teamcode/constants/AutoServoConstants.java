@@ -11,6 +11,6 @@ public class AutoServoConstants {
     public static final double[] ICServoPositions = {0.0, 0.3}; //Intake Claw
     public static final double[] OCServoPositions = {0.1, 0.5}; //>ClawOuttake Claw
     public static final double[] OKLServoPositions = {0, 0.28, 0.05}; //Outtake Linkage Left
-    public static final double[] OKRServoPositions = {0, 0.28, 0.05}; //Outtake Linkage Righ
+    public static final double[] OKRServoPositions = {0, 0.28, 0.05}; //Outtake Linkage Right
 
 }

@@ -348,7 +348,7 @@ public class SharkbaitOohaha extends LinearOpMode
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             timer.schedule(new OuttakeExtension(-1), 0 * DELAY_BETWEEN_MOVES);
             timer.schedule(new OuttakeExtension(.25), 4 * DELAY_BETWEEN_MOVES);
-            timer.schedule(new OuttakeExtension(0), 8 * DELAY_BETWEEN_MOVES);
+            timer.schedule(new OuttakeExtension(0), 9 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtClawServoPosition(1), 4 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtCoaxialServoPosition(1), 4 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtElbowServosPosition(1), 6 *DELAY_BETWEEN_MOVES);
@@ -361,7 +361,7 @@ public class SharkbaitOohaha extends LinearOpMode
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             timer.schedule(new OuttakeExtension(-1), 0 * DELAY_BETWEEN_MOVES);
-            timer.schedule(new OuttakeExtension(.25), 5 * DELAY_BETWEEN_MOVES);
+            timer.schedule(new OuttakeExtension(.25), 4 * DELAY_BETWEEN_MOVES);
             timer.schedule(new OuttakeExtension(0), 9 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtClawServoPosition(1), 5 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtCoaxialServoPosition(1), 5 * DELAY_BETWEEN_MOVES);
@@ -387,6 +387,9 @@ public class SharkbaitOohaha extends LinearOpMode
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             timer.schedule(new MoveOtClawServoPosition(1), 0 * DELAY_BETWEEN_MOVES);
+            timer.schedule(new OuttakeExtension(-1), 1 * DELAY_BETWEEN_MOVES);
+            timer.schedule(new OuttakeExtension(.25), 2 * DELAY_BETWEEN_MOVES);
+            timer.schedule(new OuttakeExtension(0), 4 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtCoaxialServoPosition(0), 4 *DELAY_BETWEEN_MOVES);
             return false;
         }
@@ -396,10 +399,9 @@ public class SharkbaitOohaha extends LinearOpMode
         @Override
         public boolean run(@NonNull TelemetryPacket telemetryPacket) {
             timer.schedule(new MoveOtClawServoPosition(1), 0 * DELAY_BETWEEN_MOVES);
-            timer.schedule(new MoveOtLinkageServoPosition(0), 2 *DELAY_BETWEEN_MOVES);
-            timer.schedule(new MoveOtCoaxialServoPosition(3), 6 * DELAY_BETWEEN_MOVES);
+            timer.schedule(new MoveOtLinkageServoPosition(0), 1 *DELAY_BETWEEN_MOVES);
+            timer.schedule(new MoveOtCoaxialServoPosition(3), 5 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtElbowServosPosition(3), 8 *DELAY_BETWEEN_MOVES);
-            timer.schedule(new MoveOtClawServoPosition(1), 0 * DELAY_BETWEEN_MOVES);
             timer.schedule(new MoveOtClawServoPosition(0), 11 * DELAY_BETWEEN_MOVES);
             return false;
         }
@@ -438,7 +440,6 @@ public class SharkbaitOohaha extends LinearOpMode
 
 
         TrajectoryActionBuilder actionBuilder = drive.actionBuilder(drive.pose); //actually a genius
-
         VelConstraint baseVelConstraint = new MinVelConstraint(Arrays.asList(
                 new TranslationalVelConstraint(60.0),
                 new AngularVelConstraint(Math.PI / 2)
@@ -467,6 +468,8 @@ public class SharkbaitOohaha extends LinearOpMode
         //bring sample to human
         Actions.runBlocking(actionBuilder.strafeToConstantHeading(new Vector2d(56, -50), new TranslationalVelConstraint(70.0)).build());
         actionBuilder = drive.actionBuilder(drive.pose);
+        Actions.runBlocking(actionBuilder.strafeToConstantHeading(new Vector2d(56, -42), new TranslationalVelConstraint(70.0)).build());
+        actionBuilder = drive.actionBuilder(drive.pose);
         //back to samples
         //Actions.runBlocking(actionBuilder.strafeToConstantHeading(new Vector2d(50, -8), new TranslationalVelConstraint(70.0)).build());
         //actionBuilder = drive.actionBuilder(drive.pose);
@@ -478,24 +481,29 @@ public class SharkbaitOohaha extends LinearOpMode
         //Actions.runBlocking(actionBuilder.strafeToConstantHeading(new Vector2d(64, -50), new TranslationalVelConstraint(70.0)).build());
 
         //move to wall and pick up specimen 2
-        Actions.runBlocking(new SequentialAction(actionBuilder.strafeToConstantHeading(new Vector2d(58, -60)).build(), actionBuilder.afterTime(0.5, new GrabSpecimen()).build())); //we don't need actionbuilder for nonmovement actions
+        Actions.runBlocking(new SequentialAction(actionBuilder.strafeToConstantHeading(new Vector2d(52, -60)).build(), actionBuilder.afterTime(0.25, new GrabSpecimen()).build()));
+        actionBuilder.strafeToConstantHeading(new Vector2d(52, -45)).build();
         actionBuilder = drive.actionBuilder(drive.pose);
+        actionBuilder.waitSeconds(1);
+        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(-5, -34.5/*HERE*/), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(1, new BeforePlaceSpecimen2()).build(), actionBuilder.afterTime(0, new IntakeOverWall()).build()));
+        Actions.runBlocking(new SequentialAction( actionBuilder.afterTime(0.5, new PlaceSpecimen()).build(), actionBuilder.afterTime(.5, new IntakeInRobot()).build()));
         actionBuilder.waitSeconds(0.5);
-        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(-5, -34/*HERE*/), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(1, new BeforePlaceSpecimen2()).build(), actionBuilder.afterTime(0, new IntakeOverWall()).build()));
+        actionBuilder.strafeToConstantHeading(new Vector2d(-5, -50), new TranslationalVelConstraint(100.0)).build();
         actionBuilder = drive.actionBuilder(drive.pose);
-        Actions.runBlocking(new SequentialAction( actionBuilder.afterTime(.5, new PlaceSpecimen()).build(), actionBuilder.afterTime(.5, new IntakeInRobot()).build()));
-        actionBuilder.strafeToConstantHeading(new Vector2d(-6, -55), new TranslationalVelConstraint(100.0)).build();
-        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(48, -50), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(0, new PickupSpecimenOffWall()).build()));
+        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(48, -50), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(1.5, new IntakeOverWall()).build(), actionBuilder.afterTime(1.5, new PickupSpecimenOffWall()).build()));
         actionBuilder = drive.actionBuilder(drive.pose);
         //specimen 3
-        Actions.runBlocking(new SequentialAction(actionBuilder.strafeToConstantHeading(new Vector2d(48, -60)).build(), actionBuilder.afterTime(0.5, new GrabSpecimen()).build(), actionBuilder.afterTime(0, new IntakeOverWall()).build()));
+        /*Actions.runBlocking(new SequentialAction(actionBuilder.strafeToConstantHeading(new Vector2d(52, -60)).build(), actionBuilder.afterTime(0.25, new GrabSpecimen()).build(), actionBuilder.afterTime(0, new IntakeOverWall()).build()));
+        actionBuilder.strafeToConstantHeading(new Vector2d(52, -45)).build();
         actionBuilder = drive.actionBuilder(drive.pose);
         actionBuilder.waitSeconds(0.5);
-        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(-4, -34/*HERE*/), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(1, new BeforePlaceSpecimen3 ()).build(), actionBuilder.afterTime(0, new IntakeOverWall()).build()));
+        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(-5, -35/*HERE*//*), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(1, new BeforePlaceSpecimen3()).build(), actionBuilder.afterTime(0, new IntakeOverWall()).build()));
+        Actions.runBlocking(new SequentialAction( actionBuilder.afterTime(0.5, new PlaceSpecimen()).build(), actionBuilder.afterTime(.5, new IntakeInRobot()).build()));
+        actionBuilder.waitSeconds(1);
+        actionBuilder.strafeToConstantHeading(new Vector2d(-5, -50), new TranslationalVelConstraint(100.0)).build();
         actionBuilder = drive.actionBuilder(drive.pose);
-        Actions.runBlocking(new SequentialAction( actionBuilder.afterTime(.5, new PlaceSpecimen()).build(), actionBuilder.afterTime(.5, new IntakeInRobot()).build()));
-        actionBuilder.strafeToConstantHeading(new Vector2d(-6, -55), new TranslationalVelConstraint(100.0)).build();
-        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(48, -50), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(0, new PickupSpecimenOffWall()).build()));
+        Actions.runBlocking(new ParallelAction(actionBuilder.strafeToConstantHeading(new Vector2d(48, -50), new TranslationalVelConstraint(100.0)).build(), actionBuilder.afterTime(1.5, new IntakeOverWall()).build(), actionBuilder.afterTime(1.5, new PickupSpecimenOffWall()).build()));
+        actionBuilder = drive.actionBuilder(drive.pose);*/
         //specimen 4
         //Actions.runBlocking(actionBuilder.afterTime(1, new IntakeOverWall()).build());
         //Actions.runBlocking(actionBuilder.afterTime(0, new PickupSpecimenOffWall()).build());
