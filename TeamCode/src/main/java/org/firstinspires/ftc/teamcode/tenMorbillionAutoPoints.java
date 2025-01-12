@@ -17,7 +17,8 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- */
+ *//*
+
 
 package org.firstinspires.ftc.teamcode;
 
@@ -44,14 +45,16 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
+*/
 /*
  * This sample demonstrates a basic (but battle-tested and essentially
  * 100% accurate) method of detecting the TeamElement when lined up with
  * the sample regions over the first 3 stones.
- */
+ *//*
+
 @Autonomous(name = "Left")
 //@Disabled
-public class SirenAutoNewLeft extends LinearOpMode
+public class tenMorbillionAutoPoints extends LinearOpMode
 {
     enum DriveDirection {
         FORWARD,
@@ -164,12 +167,14 @@ public class SirenAutoNewLeft extends LinearOpMode
     @Override
     public void runOpMode()
     {
-        /**
+        */
+/**
          * NOTE: Many comments have been omitted from this sample for the
          * sake of conciseness. If you're just starting out with EasyOpenCv,
          * you should take a look at {@link InternalCamera1Example} or its
          * webcam counterpart, {@link WebcamExample} first.
-         */
+         *//*
+
 
 
         telemetry.addData("Status", "sInitialized");
@@ -345,14 +350,16 @@ public class SirenAutoNewLeft extends LinearOpMode
 
         TrajectoryActionBuilder actionBuilder = drive.actionBuilder(drive.pose); //actually a genius
 
-                /*.lineToY(multiplier * -33);
+                */
+/*.lineToY(multiplier * -33);
         actionBuilder = actionBuilder
                 .lineToX(36)
                 .strafeToConstantHeading(new Vector2d(44, multiplier * 1))
                 .waitSeconds(5)
                 .strafeToConstantHeading(new Vector2d(46, multiplier * 1))
                 .turn(multiplier * 0.00001)
-                .lineToX(60);*/
+                .lineToX(60);*//*
+
 //                Actions.runBlocking(new ParallelAction(drive.actionBuilder(drive.pose).strafeToConstantHeading(new Vector2d(-40, -33)).build(), drive.actionBuilder(drive.pose).turn(13*(Math.PI/16)).build())); god dayum this is ugly
 //                Actions.runBlocking(new ParallelAction(actionBuilder.build(), actionBuilder.build())); //figured it out :)
 
@@ -436,4 +443,4 @@ public class SirenAutoNewLeft extends LinearOpMode
 
         return invertedDirection;
     }
-}
+}*/
